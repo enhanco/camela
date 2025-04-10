@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+
+<head>
+    <!--- basic page needs
+    ================================================== -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Blog Preview</title>
+
+    <script>
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+    </script>
+
+    <!-- CSS
+    ================================================== -->
+    <link rel="stylesheet" href="css/vendor.css">
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- favicons
+    ================================================== -->
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <!-- <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png"> -->
+    <link rel="manifest" href="site.webmanifest">
+
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', () => {
+            const blog = JSON.parse(localStorage.getItem('previewBlog'));
+            
+            if (!blog) {
+                document.body.innerHTML = '<div style="text-align: center; padding: 50px;">No hay datos de vista previa disponibles</div>';
+                return;
+            }
+
+            // Update title
+            document.querySelector('.entry__title').textContent = blog.title;
+            
+            // Update date
+            const date = new Date(blog.createdAt);
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const dateElement = document.querySelector('.entry__meta-date');
+            dateElement.innerHTML = `<svg width="24" height="24" fill="none" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px;">
+                <circle cx="12" cy="12" r="7.25" stroke="currentColor" stroke-width="1.5"></circle>
+                <path stroke="currentColor" stroke-width="1.5" d="M12 8V12L14 14"></path>
+            </svg>${date.toLocaleDateString('en-US', options)}`;
+            
+            // Update featured image if it exists
+            if (blog.featuredImage) {
+                const featuredImage = document.querySelector('.featured-image img');
+                featuredImage.src = blog.featuredImage;
+                featuredImage.alt = blog.title;
+            }
+            
+            // Update content
+            if (blog.content) {
+                const contentContainer = document.querySelector('.entry__primary .column');
+                const contentDiv = document.createElement('div');
+                contentDiv.innerHTML = blog.content;
+                contentContainer.appendChild(contentDiv);
+            }
+        });
+    </script>
+
+    <style>
+        .preview-label {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4a6fa5;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            z-index: 1000;
+            font-weight: bold;
+        }
+        .featured-image {
+            display: block;
+            margin: 2rem auto;
+            max-width: 100%;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .featured-image img {
+            display: block;
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        figure.alignwide {
+            display: block;
+            margin: 2rem auto;
+            max-width: 100%;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        figure.alignwide img {
+            display: block;
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .entry__content ul,
+        .entry__content ol {
+            margin-left: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .entry__content li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .entry__content h2,
+        .entry__content h3,
+        .entry__content h4 {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .entry__content p {
+            margin-bottom: 1.5rem;
+        }
+        
+        .entry__meta-date svg {
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+
+<body id="top">
+    <div class="preview-label">Modo de vista previa</div>
+    
+    <!-- preloader
+    ================================================== -->
+    <div id="preloader">
+        <div id="loader" class="dots-fade">
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+    </div>
+
+    <!-- page wrap
+    ================================================== -->
+    <div id="page" class="s-pagewrap">
+        <!-- # site header 
+        ================================================== -->
+       
+        <!-- # site main content
+        ================================================== -->
+        <article id="content" class="s-content entry">
+            <div class="s-pageheader entry__header">
+                <div class="row">
+                    <div class="column xl-12">
+                        <h1 class="entry__title">
+                            Cargando...
+                        </h1>
+                        <div class="entry__meta">
+                            <div class="entry__meta-date">
+                                Cargando...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- end entry__header -->
+
+            <div class="s-pagecontent entry__content">
+                <div class="row entry__primary width-narrower">
+                    <div class="column xl-12">
+                        <figure class="featured-image">
+                            <img src="" alt="Blog featured image">
+                        </figure>
+                    </div> <!-- end column-->
+                </div> <!-- end entry__primary -->
+            </div> <!-- end entry__content -->
+        </article> <!-- s-content entry-->
+
+    <!-- Java Script
+    ================================================== -->
+    <script src="js/plugins.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

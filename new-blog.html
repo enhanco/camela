@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog Editor</title>
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/new-blog.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-pen-alt"></i> Editor de Blogs</h1>
+      <div class="edit-mode" id="editModeIndicator">
+        <i class="fas fa-edit"></i> Modo de Edición
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="blogTitle">Título *</label>
+      <input type="text" id="blogTitle" class="form-control" placeholder="Enter blog title..." required>
+      <div id="titleError" class="validation-error">Título es requerido</div>
+    </div>
+
+    <div class="form-group">
+      <label for="blogFeaturedImage">Imagen Destacada *</label>
+      <div class="image-upload-container">
+        <div class="image-preview" id="imagePreview">
+          <span style="color: #6c757d;">No se ha seleccionado ninguna imagen</span>
+        </div>
+        <button class="btn upload-btn" id="uploadImageBtn">
+          <i class="fas fa-upload"></i> Subir Imagen
+        </button>
+        <input type="hidden" id="blogFeaturedImage" required>
+      </div>
+      <div id="imageError" class="validation-error">La imagen destacada es requerida</div>
+    </div>
+
+    <div class="form-group">
+      <label for="blogExcerpt">Resumen *</label>
+      <textarea id="blogExcerpt" class="form-control"
+        placeholder="Escribe un resumen corto de tu post de blog (15-50 palabras)..." required></textarea>
+      <div id="excerptError" class="validation-error">El resumen debe tener entre 15 y 50 palabras</div>
+    </div>
+
+    <div class="form-group">
+      <label for="blogContent">Contenido *</label>
+      <div id="editor-toolbar">
+        <span class="ql-formats">
+          <select class="ql-font"></select>
+          <select class="ql-size"></select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-bold"></button>
+          <button class="ql-italic"></button>
+          <button class="ql-underline"></button>
+          <button class="ql-strike"></button>
+        </span>
+        <span class="ql-formats">
+          <select class="ql-color"></select>
+          <select class="ql-background"></select>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-header" value="1"></button>
+          <button class="ql-header" value="2"></button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-list" value="ordered"></button>
+          <button class="ql-list" value="bullet"></button>
+          <button class="ql-blockquote"></button>
+          <button class="ql-code-block"></button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-link"></button>
+          <button class="ql-image"></button>
+          <button class="ql-video"></button>
+        </span>
+        <span class="ql-formats">
+          <button class="ql-clean"></button>
+        </span>
+      </div>
+      <div class="editor-container" id="editor-container"></div>
+      <div id="contentError" class="validation-error">El contenido es requerido</div>
+    </div>
+
+    <div class="save-options">
+      <h3>Opciones de Guardado</h3>
+      <div class="radio-group">
+        <div class="radio-option">
+          <input type="radio" id="saveAsDraft" name="saveOption" value="draft" checked>
+          <label for="saveAsDraft">Guardar como Borrador</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" id="publishNow" name="saveOption" value="publish">
+          <label for="publishNow">Publicar Ahora</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" id="saveBlogBtn">
+        <i class="fas fa-save"></i> Guardar Blog
+      </button>
+      <button class="btn btn-success" id="previewBlogBtn">
+        <i class="fas fa-eye"></i> Vista Previa
+      </button>
+      <button class="btn btn-danger" id="resetFormBtn">
+        <i class="fas fa-trash-alt"></i> Reiniciar
+      </button>
+      <button class="btn btn-secondary" id="cancelBtn">
+        <i class="fas fa-times"></i> Cancelar
+      </button>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <!-- Quill JS -->
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+  <script>
+    // Store the current blog ID being edited
+    let currentEditingId = null;
+    let isEditMode = false;
+
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDazyhAKBFq7hQ7-bT4mmGU4guf3r9JMl0",
+      authDomain: "camela-ef9e3.firebaseapp.com",
+      projectId: "camela-ef9e3",
+      storageBucket: "camela-ef9e3.firebasestorage.app",
+      messagingSenderId: "1095984705888",
+      appId: "1:1095984705888:web:d0442a2b02ce1ccba1ee05",
+      measurementId: "G-X0X9JG6K5K"
+    };
+
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Initialize Quill editor
+    const quill = new Quill("#editor-container", {
+      theme: "snow",
+      modules: {
+        toolbar: {
+          container: "#editor-toolbar",
+          handlers: {
+            image: imageHandler
+          }
+        }
+      },
+      placeholder: "Write your blog content here..."
+    });
+
+    // DOM elements
+    const uploadImageBtn = document.getElementById('uploadImageBtn');
+    const imagePreview = document.getElementById('imagePreview');
+    const saveBlogBtn = document.getElementById('saveBlogBtn');
+    const previewBlogBtn = document.getElementById('previewBlogBtn');
+    const resetFormBtn = document.getElementById('resetFormBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const titleInput = document.getElementById('blogTitle');
+    const excerptInput = document.getElementById('blogExcerpt');
+    const featuredImageInput = document.getElementById('blogFeaturedImage');
+    const titleError = document.getElementById('titleError');
+    const imageError = document.getElementById('imageError');
+    const excerptError = document.getElementById('excerptError');
+    const contentError = document.getElementById('contentError');
+    const editModeIndicator = document.getElementById('editModeIndicator');
+
+    // Event listeners
+    uploadImageBtn.addEventListener('click', handleImageUpload);
+    saveBlogBtn.addEventListener('click', saveBlog);
+    previewBlogBtn.addEventListener('click', previewBlog);
+    resetFormBtn.addEventListener('click', resetForm);
+    cancelBtn.addEventListener('click', cancelEdit);
+
+    // Cancel edit function
+    function cancelEdit() {
+      // Redirect to blog management page
+      window.location.href = "blog-management.html";
+    }
+
+    // Image upload handler
+    function handleImageUpload() {
+      const input = document.createElement('input');
+      input.setAttribute('type', 'file');
+      input.setAttribute('accept', 'image/*');
+      input.click();
+
+      input.onchange = async () => {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Show loading state
+        imagePreview.innerHTML = '<span>Uploading...</span>';
+
+        try {
+          const imageUrl = await uploadToCloudinary(file);
+          featuredImageInput.value = imageUrl;
+
+          // Update preview
+          imagePreview.innerHTML = `<img src="${imageUrl}" alt="Preview">`;
+          hideError(imageError);
+
+          // Insert image into editor at current cursor position
+          const range = quill.getSelection();
+          if (range) {
+            quill.insertEmbed(range.index, 'image', imageUrl);
+          }
+        } catch (error) {
+          console.error("Error uploading image:", error);
+          imagePreview.innerHTML = '<span style="color: var(--danger-color);">Upload failed</span>';
+          showError(imageError, "Failed to upload image");
+        }
+      };
+    }
+
+    // Cloudinary upload function
+    async function uploadToCloudinary(file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "camela"); // Replace with your upload preset
+      formData.append("cloud_name", "dvtonqyct"); // Replace with your cloud name
+
+      const response = await fetch("https://api.cloudinary.com/v1_1/dvtonqyct/image/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload image");
+      }
+
+      const data = await response.json();
+      return data.secure_url;
+    }
+
+    // Quill image handler
+    function imageHandler() {
+      handleImageUpload();
+    }
+
+    // Count words in a string
+    function countWords(str) {
+      return str.trim() === '' ? 0 : str.trim().split(/\s+/).length;
+    }
+
+    // Validate form fields
+    function validateForm() {
+      let isValid = true;
+      const title = titleInput.value.trim();
+      const excerpt = excerptInput.value.trim();
+      const featuredImage = featuredImageInput.value;
+      const content = quill.root.innerHTML;
+
+      // Validate title
+      if (!title) {
+        showError(titleError, "El título es requerido");
+        isValid = false;
+      } else {
+        hideError(titleError);
+      }
+
+      // Validate featured image
+      if (!featuredImage) {
+        showError(imageError, "La imagen destacada es requerida");
+        isValid = false;
+      } else {
+        hideError(imageError);
+      }
+
+      // Validate excerpt
+      const wordCount = countWords(excerpt);
+      if (!excerpt) {
+        showError(excerptError, "El resumen es requerido");
+        isValid = false;
+      } else if (wordCount < 15 || wordCount > 50) {
+        showError(excerptError, "El resumen debe tener entre 15 y 50 palabras");
+        isValid = false;
+      } else {
+        hideError(excerptError);
+      }
+
+      // Validate content
+      if (!content || content === '<p><br></p>') {
+        showError(contentError, "El contenido es requerido");
+        isValid = false;
+      } else {
+        hideError(contentError);
+      }
+
+      return isValid;
+    }
+
+    // Show error message
+    function showError(element, message) {
+      element.textContent = message;
+      element.style.display = 'block';
+      element.previousElementSibling.classList.add('is-invalid');
+    }
+
+    // Hide error message
+    function hideError(element) {
+      element.style.display = 'none';
+      element.previousElementSibling.classList.remove('is-invalid');
+    }
+
+    // Save blog function
+    async function saveBlog() {
+      if (!validateForm()) {
+        return;
+      }
+
+      const title = titleInput.value.trim();
+      const featuredImage = featuredImageInput.value;
+      const excerpt = excerptInput.value.trim();
+      const content = quill.root.innerHTML;
+      const saveOption = document.querySelector('input[name="saveOption"]:checked').value;
+      const status = saveOption === 'publish' ? 'published' : 'draft';
+
+      try {
+        const blogData = {
+          title,
+          featuredImage,
+          excerpt,
+          content,
+          status,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (isEditMode && currentEditingId) {
+          // Update existing blog
+          await db.collection("blogs").doc(currentEditingId).update(blogData);
+          showAlert('Blog actualizado correctamente!', 'success');
+        } else {
+          // Create new blog - include createdAt timestamp
+          blogData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+          await db.collection("blogs").add(blogData);
+          const successMessage = status === 'published'
+            ? 'Blog publicado correctamente!'
+            : 'Blog guardado como borrador correctamente!';
+          showAlert(successMessage, 'success');
+        }
+
+        // Redirect to blog management page after successful save
+        setTimeout(() => {
+          window.location.href = "blog-management.html";
+        }, 1000); // Delay redirect to show success message
+      } catch (error) {
+        console.error("Error saving blog:", error);
+        showAlert('Error al guardar el blog. Por favor, inténtalo de nuevo.');
+      }
+    }
+
+    // Preview blog function
+    function previewBlog() {
+      if (!validateForm()) {
+        return;
+      }
+
+      const title = titleInput.value.trim();
+      const content = quill.root.innerHTML;
+      const featuredImage = featuredImageInput.value;
+      const excerpt = excerptInput.value.trim();
+
+      // Store in localStorage for the preview page
+      localStorage.setItem('previewBlog', JSON.stringify({
+        title,
+        content,
+        featuredImage,
+        excerpt,
+        createdAt: new Date().toISOString()
+      }));
+
+      // Open the preview page
+      window.open('preview.html', '_blank');
+    }
+
+    // Reset form function
+    function resetForm() {
+      titleInput.value = '';
+      featuredImageInput.value = '';
+      excerptInput.value = '';
+      quill.setContents([]);
+      imagePreview.innerHTML = '<span style="color: #6c757d;">No se ha seleccionado ninguna imagen</span>';
+      currentEditingId = null;
+      isEditMode = false;
+      editModeIndicator.style.display = 'none';
+      saveBlogBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Blog';
+      document.getElementById('saveAsDraft').checked = true;
+
+      // Clear validation errors
+      hideError(titleError);
+      hideError(imageError);
+      hideError(excerptError);
+      hideError(contentError);
+    }
+
+    // Show alert message
+    function showAlert(message, type = 'error') {
+      const alertBox = document.createElement('div');
+      alertBox.className = `alert ${type === 'success' ? 'alert-success' : ''}`;
+      alertBox.textContent = message;
+
+      // Insert after header
+      const header = document.querySelector('.header');
+      header.parentNode.insertBefore(alertBox, header.nextSibling);
+
+      // Remove after 5 seconds
+      setTimeout(() => {
+        alertBox.remove();
+      }, 5000);
+    }
+
+    // Load blog for editing
+    function loadBlogForEditing(id) {
+      db.collection("blogs").doc(id).get()
+        .then((doc) => {
+          if (doc.exists) {
+            const blog = doc.data();
+            currentEditingId = id;
+            isEditMode = true;
+
+            // Show edit mode indicator
+            editModeIndicator.style.display = 'flex';
+
+            // Populate form fields
+            titleInput.value = blog.title || '';
+            excerptInput.value = blog.excerpt || '';
+            featuredImageInput.value = blog.featuredImage || '';
+
+            // Set content
+            if (blog.content) {
+              quill.root.innerHTML = blog.content;
+            }
+
+            // Set image preview
+            if (blog.featuredImage) {
+              imagePreview.innerHTML = `<img src="${blog.featuredImage}" alt="Preview">`;
+            }
+
+            // Set save option based on current status
+            if (blog.status === 'published') {
+              document.getElementById('publishNow').checked = true;
+            } else {
+              document.getElementById('saveAsDraft').checked = true;
+            }
+
+            // Update button text
+            saveBlogBtn.innerHTML = '<i class="fas fa-save"></i> Actualizar Blog';
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+          }
+        })
+        .catch((error) => {
+          console.error("Error loading blog:", error);
+          showAlert('Error al cargar el blog para la edición.');
+        });
+    }
+
+    // Initialize the app
+    function init() {
+      // Check if we're editing an existing blog (from URL parameter)
+      const urlParams = new URLSearchParams(window.location.search);
+      const editId = urlParams.get('id');
+      console.log("editId :", editId)
+
+      if (editId) {
+        loadBlogForEditing(editId);
+      }
+    }
+
+    // Initialize the application
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+
+</html>
